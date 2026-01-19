@@ -10,7 +10,7 @@ interface ChatWindowProps {
 export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
   const initialMessage: ChatMessage = { 
     role: 'model', 
-    content: 'As-salamu alaykum! Saya adalah Quran MCP Assistant. Ada yang bisa saya bantu hari ini?\n\nAnda bisa bertanya: "Apa kata Al-Quran tentang sabar?" atau "Tampilkan Al-Baqarah 286".' 
+    content: 'Assalamu’alaikum Warahmatullahi Wabarakatuh. Selamat datang di **Quran MCP Explorer**.\n\nSaya adalah asisten virtual cerdas Anda yang terhubung langsung dengan sumber terverifikasi Quran.com. Saya siap membantu Anda mengeksplorasi kedalaman makna, mencari ayat berdasarkan topik, atau memberikan referensi teks Arab yang akurat.\n\nApa yang ingin Anda pelajari atau cari dari Al-Quran hari ini?\n\n*Contoh: "Ayat tentang memaafkan", "Tafsir Surah Al-Kahfi", atau "Tampilkan Al-Baqarah 255"*' 
   };
 
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
