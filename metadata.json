@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Quran MCP Explorer",
+  "description": "A high-fidelity interface for the Quran Model Context Protocol (MCP) Server, integrating Gemini AI with the Quran.com API for accurate, verified religious context and study.",
+  "requestFramePermissions": []
+}
