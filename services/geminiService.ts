@@ -51,7 +51,7 @@ export const geminiService = {
       : [{ role: 'user', parts: [{ text: message }] }];
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-flash-lite-latest',
       contents: contents,
       config: {
         systemInstruction: `Anda adalah Sahabat Quran. Bantu pengguna mengeksplorasi Al-Quran dengan penuh kasih dan data yang akurat.
@@ -62,12 +62,13 @@ export const geminiService = {
         2. Teks Arab: Tuliskan apa adanya (Uthmani).
         3. Terjemahan: Gunakan format "**Terjemahan:** [Isi Terjemahan]"
         4. Gunakan garis pemisah "---" di antara ayat yang berbeda.
-        5. Setiap ayat wajib memiliki link: https://quran.com/id/[surah]:[ayah]?translations=33
-        6. Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.
         
-        CATATAN PENCARIAN:
-        - Fungsi search_verse mengembalikan 20 hasil per halaman. 
-        - Jika pengguna meminta "lebih banyak" atau "halaman berikutnya", panggil search_verse kembali dengan parameter page yang lebih tinggi.`,
+        PERATURAN LINK:
+        Setiap ayat WAJIB memiliki link referensi di baris baru.
+        FORMAT LINK: Tuliskan URL mentah saja tanpa tanda kurung atau format markdown [teks](url).
+        CONTOH LINK: https://quran.com/id/1:1?translations=33
+        
+        Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.`,
         tools: [{ 
           functionDeclarations: [
             searchVerseTool, 
@@ -93,10 +94,8 @@ export const geminiService = {
 
           STRICT GUIDELINES:
           1. CONTENT: Must be strictly beautiful, peaceful, and inspiring. Focus on serene landscapes, morning dew, calm oceans, starry skies, or elegant abstract Islamic geometric patterns (arabesque).
-          2. SAFETY: Strictly NO pornography, NO nudity, NO violence, NO cruelty, NO blood, NO weapons, and NO disturbing imagery. The output must be family-friendly and spiritually uplifting.
-          3. COMPOSITION: NO text in the image. NO human faces or clear human figures. 
-          4. STYLE: High-quality minimalist digital art, cinematic lighting, soft atmospheric glow. Colors: Elegant tones like deep emerald green, royal gold, soft sapphire blue, or warm dawn colors.
-          5. RESOLUTION: Aesthetic, high-definition 2k style finish.`
+          2. STYLE: High-quality minimalist digital art, cinematic lighting, soft atmospheric glow. Colors: Elegant tones like deep emerald green, royal gold, soft sapphire blue, or warm dawn colors.
+          3. COMPOSITION: NO text in the image. NO human faces or clear human figures.`
         }]
       },
       config: {
@@ -106,7 +105,6 @@ export const geminiService = {
       }
     });
 
-    // Menggunakan Optional Chaining (?.) untuk keamanan tipe data di TypeScript
     const candidates = response.candidates;
     if (candidates && candidates.length > 0) {
       const parts = candidates[0].content?.parts;
@@ -119,7 +117,7 @@ export const geminiService = {
       }
     }
     
-    throw new Error("Gagal menghasilkan gambar atau data gambar tidak ditemukan dalam respon.");
+    throw new Error("Gagal menghasilkan gambar.");
   },
 
   async executeTool(name: string, args: any): Promise<any> {

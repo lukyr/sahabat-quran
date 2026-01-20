@@ -91,7 +91,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
         ];
         
         const finalResponse = await geminiService.chat(
-          "Tolong berikan jawaban yang lengkap. Gunakan garis pemisah --- di antara ayat. Sertakan judul referensi ayat menggunakan format ### Nama Surah (Nomor): Ayat.", 
+          "Tolong berikan jawaban yang lengkap. Gunakan garis pemisah --- di antara ayat. Sertakan judul referensi ayat menggunakan format ### Nama Surah (Nomor): Ayat. Pastikan setiap ayat memiliki link URL mentah (plain link) di baris baru.", 
           toolHistory
         );
         
@@ -126,7 +126,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
     let arabic = "";
     let translation = "";
 
-    // Cari batas blok ayat (dari index tombol ke atas sampai ketemu pembatas '---' atau awal pesan)
     let startIndex = 0;
     for (let i = index; i >= 0; i--) {
       if (lines[i].trim() === '---') {
@@ -135,7 +134,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
       }
     }
 
-    // Scan blok tersebut untuk mengambil data
     const arabicRegex = /[\u0600-\u06FF]/;
     for (let i = startIndex; i <= index + 2 && i < lines.length; i++) {
       const line = lines[i].trim();
@@ -147,8 +145,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
         arabic = line;
       } else if (line.toLowerCase().includes('terjemahan:')) {
         translation = line.replace(/(\*\*)*Terjemahan:(\*\*)*\s*/i, '').trim();
-      } else if (translation === "" && !line.startsWith('http') && !line.startsWith('###') && !arabicRegex.test(line)) {
-        // Jika baris bukan meta data/arab/link, anggap sebagai terjemahan jika belum ada
+      } else if (translation === "" && !line.match(/https?:\/\/quran\.com/) && !line.startsWith('###') && !arabicRegex.test(line)) {
         translation = line;
       }
     }
@@ -170,14 +167,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
         return <div key={i} className="my-4"><span className="inline-flex items-center px-4 py-1.5 bg-emerald-600 text-white rounded-full text-[11px] lg:text-xs font-bold shadow-md shadow-emerald-200 tracking-wide uppercase">{headerMatch[1]}</span></div>;
       }
 
-      const urlRegex = /(https?:\/\/quran\.com\/(id\/)?[^\s\)]+)/g;
+      // Regex URL yang lebih robust untuk menangkap link quran.com
+      const urlRegex = /(https?:\/\/quran\.com\/[^\s\)]+)/g;
       if (urlRegex.test(line)) {
         const urlMatch = line.match(urlRegex)?.[0];
         if (urlMatch) {
-          let label = urlMatch.split('?')[0].replace('https://quran.com/', '').replace('id/', '').replace('/', ':');
+          // Bersihkan URL dari sisa-sisa karakter markdown jika ada
+          const cleanUrl = urlMatch.replace(/[\]\)]+$/, '');
+          const labelMatch = cleanUrl.match(/quran\.com\/(?:id\/)?(\d+:\d+)/);
+          const label = labelMatch ? labelMatch[1] : 'Lihat Ayat';
+
           return (
             <div key={i} className="my-2 flex flex-wrap gap-2">
-              <button onClick={() => handleLinkClick(urlMatch)} className="inline-flex items-center gap-1.5 px-3 py-1 lg:px-4 lg:py-1.5 bg-emerald-50 text-emerald-700 rounded-full hover:bg-emerald-600 hover:text-white transition-smooth border border-emerald-100 font-bold text-[10px] lg:text-xs shadow-sm">
+              <button onClick={() => handleLinkClick(cleanUrl)} className="inline-flex items-center gap-1.5 px-3 py-1 lg:px-4 lg:py-1.5 bg-emerald-50 text-emerald-700 rounded-full hover:bg-emerald-600 hover:text-white transition-smooth border border-emerald-100 font-bold text-[10px] lg:text-xs shadow-sm">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
                 Detail Quran.com ({label})
               </button>
