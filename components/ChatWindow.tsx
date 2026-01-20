@@ -10,13 +10,17 @@ interface ChatWindowProps {
 export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
   const initialMessage = useMemo<ChatMessage>(() => ({ 
     role: 'model', 
-    content: 'Assalamu’alaikum Warahmatullahi Wabarakatuh. Selamat datang di **Quran Explorer**.\n\nSaya adalah **Sahabat Quran**, teman virtual Anda untuk menjelajahi keindahan firman Allah. Saya siap membantu Anda mencari ayat berdasarkan topik, memahami makna, atau sekadar berbagi inspirasi dari Al-Quran.\n\nApa yang ingin Anda pelajari hari ini?\n\n*Contoh: "Ayat tentang ketenangan hati", "Kisah Nabi Musa di Al-Quran", atau "Tampilkan Surah Al-Fatihah"*' 
+    content: 'Assalamu’alaikum Warahmatullahi Wabarakatuh. Selamat datang di **Sahabat Quran**.\n\nSaya adalah teman virtual Anda untuk menjelajahi keindahan firman Allah. Saya siap membantu Anda mencari ayat berdasarkan topik, memahami makna, atau sekadar berbagi inspirasi dari Al-Quran.\n\nApa yang ingin Anda pelajari hari ini?\n\n*Contoh: "Ayat tentang ketenangan hati", "Kisah Nabi Musa di Al-Quran", atau "Tampilkan Surah Al-Fatihah"*' 
   }), []);
 
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Refs to handle race conditions during "Clear"
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastClearTimestamp = useRef<number>(Date.now());
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -25,23 +29,37 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
   }, [messages, isLoading]);
 
   const handleClear = () => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus percakapan ini?')) {
-      setMessages([initialMessage]);
-      setInput('');
-      setIsLoading(false);
+    // 1. Mark the timestamp of the clear
+    lastClearTimestamp.current = Date.now();
+    
+    // 2. Abort any ongoing network request if possible
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
+
+    // 3. Reset all UI states
+    setMessages([initialMessage]);
+    setInput('');
+    setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
+    const requestTime = Date.now();
     const userMessage = input.trim();
+    
+    // Create new abort controller for this specific request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
     try {
+      // Prepare history (excluding initial greeting)
       const apiHistory = messages
         .filter((m, idx) => !(idx === 0 && m.role === 'model'))
         .map(m => ({
@@ -51,6 +69,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
 
       const response = await geminiService.chat(userMessage, apiHistory);
       
+      // CRITICAL: Check if "Clear" was clicked while we were waiting
+      if (requestTime < lastClearTimestamp.current) return;
+
       if (response.toolCalls && response.toolCalls.length > 0) {
         const toolResults = await Promise.all(
           response.toolCalls.map(async (tc) => {
@@ -58,6 +79,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
             return { name: tc.name, args: tc.args, result };
           })
         );
+
+        // Check again after tools execute
+        if (requestTime < lastClearTimestamp.current) return;
 
         const toolHistory = [
           ...apiHistory,
@@ -76,6 +100,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
           toolHistory
         );
         
+        if (requestTime < lastClearTimestamp.current) return;
+
         setMessages(prev => [...prev, { 
           role: 'model', 
           content: finalResponse.text || "Hasil telah diproses. Lihat referensi di bawah.",
@@ -85,10 +111,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         setMessages(prev => [...prev, { role: 'model', content: response.text }]);
       }
     } catch (error) {
+      // Ignore errors if the request was aborted manually by "Clear"
+      if (requestTime < lastClearTimestamp.current) return;
+      
       console.error(error);
       setMessages(prev => [...prev, { role: 'model', content: "Maaf, Sahabat Quran sedang mengalami sedikit kendala. Coba cek koneksi Anda ya." }]);
     } finally {
-      setIsLoading(false);
+      if (requestTime >= lastClearTimestamp.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -166,10 +197,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
         
         <button 
           onClick={handleClear}
-          className="text-slate-200 hover:text-red-400 transition-smooth p-2.5 hover:bg-red-50 rounded-2xl"
-          title="Reset Percakapan"
+          className="text-slate-300 hover:text-red-500 transition-smooth p-2.5 hover:bg-red-50 rounded-2xl group"
+          title="Hapus Semua Percakapan"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 transform group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>
@@ -177,7 +208,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
         {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
             <div className={`max-w-[92%] ${
               m.role === 'user' 
                 ? 'bg-slate-900 text-white rounded-[2rem_2rem_0.5rem_2rem] px-8 py-5 shadow-xl shadow-slate-200' 
@@ -198,14 +229,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
           </div>
         ))}
         {isLoading && (
-          <div className="flex justify-start">
+          <div className="flex justify-start animate-in fade-in duration-300">
             <div className="bg-slate-50 rounded-3xl px-6 py-4 border border-slate-100 flex items-center space-x-4">
               <div className="flex space-x-1.5">
                 <div className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-bounce"></div>
                 <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Mengkaji Ayat...</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sahabat Quran sedang mengetik...</span>
             </div>
           </div>
         )}
@@ -217,13 +248,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick }) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Tanya apa saja seputar Al-Quran..."
+            placeholder="Ketik pesan Anda di sini..."
             className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2rem] py-5 px-10 pr-20 text-[16px] text-slate-900 placeholder-slate-400 font-semibold focus:outline-none focus:bg-white focus:border-emerald-500/20 transition-smooth shadow-inner"
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="absolute right-4 p-4 bg-emerald-600 text-white rounded-[1.5rem] shadow-lg shadow-emerald-200 hover:bg-emerald-700 disabled:opacity-20 transition-smooth active:scale-90"
+            className="absolute right-4 p-4 bg-emerald-600 text-white rounded-[1.5rem] shadow-lg shadow-emerald-200 hover:bg-emerald-700 disabled:opacity-20 transition-smooth active:scale-95"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

@@ -17,7 +17,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </svg>
             </div>
             <div>
-              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Quran Explorer</h1>
+              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Sahabat Quran</h1>
             </div>
           </div>
           
@@ -36,7 +36,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <footer className="bg-white border-t border-slate-100 py-8 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-slate-400 text-[11px] font-bold uppercase tracking-[0.2em] mb-2">Terintegrasi dengan Quran.com & Gemini AI</p>
-          <p className="text-slate-300 text-[10px]">© 2025 Quran Explorer Project. Dikembangkan untuk kemaslahatan umat.</p>
+          <p className="text-slate-300 text-[10px]">© 2025 Sahabat Quran Project. Dikembangkan untuk kemaslahatan umat.</p>
         </div>
       </footer>
     </div>
