@@ -44,13 +44,30 @@ const getSurahInfoTool = {
   },
 };
 
+/**
+ * Helper untuk melakukan retry jika terkena Rate Limit (429)
+ */
+async function apiCallWithRetry(fn: () => Promise<any>, retries = 3, delay = 2000): Promise<any> {
+  try {
+    return await fn();
+  } catch (error: any) {
+    const isRateLimit = error?.message?.includes('429') || error?.status === 429;
+    if (isRateLimit && retries > 0) {
+      console.warn(`Rate limit hit. Retrying in ${delay}ms... (${retries} retries left)`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return apiCallWithRetry(fn, retries - 1, delay * 2); // Exponential backoff
+    }
+    throw error;
+  }
+}
+
 export const geminiService = {
   async chat(message: string, history: any[] = []): Promise<{ text: string, toolCalls?: any[] }> {
     const contents = history.length > 0 
       ? [...history, { role: 'user', parts: [{ text: message }] }]
       : [{ role: 'user', parts: [{ text: message }] }];
 
-    const response = await ai.models.generateContent({
+    const response = await apiCallWithRetry(() => ai.models.generateContent({
       model: 'gemini-flash-lite-latest',
       contents: contents,
       config: {
@@ -77,7 +94,7 @@ export const geminiService = {
           ] 
         }],
       },
-    });
+    }));
 
     return {
       text: response.text || '',
@@ -86,7 +103,7 @@ export const geminiService = {
   },
 
   async generateVerseImage(theme: string): Promise<string> {
-    const response = await ai.models.generateContent({
+    const response = await apiCallWithRetry(() => ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [{
@@ -103,7 +120,7 @@ export const geminiService = {
           aspectRatio: "1:1"
         }
       }
-    });
+    }));
 
     const candidates = response.candidates;
     if (candidates && candidates.length > 0) {

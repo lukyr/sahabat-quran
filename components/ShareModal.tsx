@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { geminiService } from '../services/geminiService';
 
 interface ShareModalProps {
@@ -12,21 +12,31 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  
+  // Cache sederhana untuk mencegah regenerasi gambar jika user bolak-balik buka modal ayat yang sama
+  const imageCache = useRef<Record<string, string>>({});
 
   useEffect(() => {
     if (isOpen && verseData) {
-      generateImage();
+      const cacheKey = `${verseData.reference}-${verseData.translation.substring(0, 20)}`;
+      if (imageCache.current[cacheKey]) {
+        setImageUrl(imageCache.current[cacheKey]);
+      } else {
+        generateImage(cacheKey);
+      }
     } else {
-      setImageUrl(null);
+      // Jangan reset imageUrl jika ingin persistent, tapi untuk memory safety kita reset jika modal tutup
+      if (!isOpen) setImageUrl(null);
     }
   }, [isOpen, verseData]);
 
-  const generateImage = async () => {
+  const generateImage = async (cacheKey: string) => {
     if (!verseData) return;
     setIsLoading(true);
     try {
       const theme = `${verseData.reference}: ${verseData.translation.substring(0, 50)}`;
       const img = await geminiService.generateVerseImage(theme);
+      imageCache.current[cacheKey] = img;
       setImageUrl(img);
     } catch (error) {
       console.error(error);
@@ -176,7 +186,6 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
               console.log("Share cancelled or failed", err);
             }
           } else {
-            // Fallback: Just download if share API not supported
             handleDownload();
           }
           setIsSharing(false);
