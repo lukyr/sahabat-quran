@@ -106,12 +106,16 @@ export const geminiService = {
       }
     });
 
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
+    if (response.candidates && response.candidates.length > 0) {
+      const parts = response.candidates[0].content.parts;
+      for (const part of parts) {
+        if (part.inlineData) {
+          return `data:image/png;base64,${part.inlineData.data}`;
+        }
       }
     }
-    throw new Error("Gagal menghasilkan gambar");
+    
+    throw new Error("Gagal menghasilkan gambar atau tidak ada kandidat yang dikembalikan.");
   },
 
   async executeTool(name: string, args: any): Promise<any> {
