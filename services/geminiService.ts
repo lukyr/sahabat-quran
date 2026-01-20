@@ -2,7 +2,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { quranService } from "./quranService";
 
-const createAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Inisialisasi AI menggunakan API_KEY dari environment
+const createAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.error("API_KEY tidak ditemukan di environment variables.");
+  }
+  return new GoogleGenAI({ apiKey: apiKey || "" });
+};
 
 const searchVerseTool = {
   name: 'search_verse',
@@ -51,7 +58,7 @@ export const geminiService = {
       : [{ role: 'user', parts: [{ text: message }] }];
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: contents,
       config: {
         systemInstruction: `Anda adalah Sahabat Quran. Bantu pengguna mengeksplorasi Al-Quran dengan penuh kasih dan data yang akurat.
