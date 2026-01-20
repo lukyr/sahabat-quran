@@ -106,16 +106,20 @@ export const geminiService = {
       }
     });
 
-    if (response.candidates && response.candidates.length > 0) {
-      const parts = response.candidates[0].content.parts;
-      for (const part of parts) {
-        if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
+    // Menggunakan Optional Chaining (?.) untuk keamanan tipe data di TypeScript
+    const candidates = response.candidates;
+    if (candidates && candidates.length > 0) {
+      const parts = candidates[0].content?.parts;
+      if (parts) {
+        for (const part of parts) {
+          if (part.inlineData?.data) {
+            return `data:image/png;base64,${part.inlineData.data}`;
+          }
         }
       }
     }
     
-    throw new Error("Gagal menghasilkan gambar atau tidak ada kandidat yang dikembalikan.");
+    throw new Error("Gagal menghasilkan gambar atau data gambar tidak ditemukan dalam respon.");
   },
 
   async executeTool(name: string, args: any): Promise<any> {
