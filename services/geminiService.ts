@@ -9,10 +9,11 @@ const searchVerseTool = {
   name: 'search_verse',
   parameters: {
     type: Type.OBJECT,
-    description: 'Search for Quranic verses based on keywords (e.g., "patience", "charity").',
+    description: 'Search for Quranic verses based on keywords (e.g., "patience", "charity"). Supports pagination.',
     properties: {
       query: { type: Type.STRING, description: 'The search query string.' },
-      language: { type: Type.STRING, description: 'Language of search (id or en). Default id.' }
+      language: { type: Type.STRING, description: 'Language of search (id or en). Default id.' },
+      page: { type: Type.NUMBER, description: 'Page number for search results (default 1). Use this if user asks for more results.' }
     },
     required: ['query'],
   },
@@ -62,7 +63,11 @@ export const geminiService = {
         3. Terjemahan: Gunakan format "**Terjemahan:** [Isi Terjemahan]"
         4. Gunakan garis pemisah "---" di antara ayat yang berbeda.
         5. Setiap ayat wajib memiliki link: https://quran.com/id/[surah]:[ayah]?translations=33
-        6. Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.`,
+        6. Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.
+        
+        CATATAN PENCARIAN:
+        - Fungsi search_verse mengembalikan 20 hasil per halaman. 
+        - Jika pengguna meminta "lebih banyak" atau "halaman berikutnya", panggil search_verse kembali dengan parameter page yang lebih tinggi.`,
         tools: [{ 
           functionDeclarations: [
             searchVerseTool, 
@@ -83,7 +88,7 @@ export const geminiService = {
     try {
       switch (name) {
         case 'search_verse':
-          const searchData = await quranService.searchVerses(args.query, args.language || 'id');
+          const searchData = await quranService.searchVerses(args.query, args.language || 'id', args.page || 1);
           if (!searchData || searchData.length === 0) return { message: "Tidak ada ayat yang ditemukan." };
           return searchData;
         case 'get_ayah_details':
