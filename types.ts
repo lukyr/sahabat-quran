@@ -19,7 +19,7 @@ export interface Verse {
   id: number;
   verse_number: number;
   verse_key: string;
-  text_uthmani?: string;
+  text_uthmani: string;
   text_indopak?: string;
   translations?: Array<{
     id: number;

@@ -1,38 +1,126 @@
 
 import { Surah, Verse, SearchResult } from '../types';
+import { API_CONFIG, ERROR_MESSAGES } from '../constants';
+import {
+  validateSurahNumber,
+  validateAyahNumber,
+  validateSearchQuery,
+  validatePageNumber,
+  isValidLanguage
+} from '../utils/validation';
+import { handleError, createTimeoutPromise, shouldRetry, logError, AppError } from '../utils/errorHandler';
 
-const BASE_URL = 'https://api.quran.com/api/v4';
+/**
+ * Helper untuk melakukan retry dengan exponential backoff
+ */
+async function fetchWithRetry<T>(
+  fetchFn: () => Promise<Response>,
+  retries = API_CONFIG.MAX_RETRIES,
+  delay = API_CONFIG.RETRY_DELAY
+): Promise<T> {
+  let lastError: AppError | null = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await Promise.race([
+        fetchFn(),
+        createTimeoutPromise(API_CONFIG.REQUEST_TIMEOUT)
+      ]);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data as T;
+
+    } catch (error) {
+      lastError = handleError(error);
+      logError(lastError, { attempt, retries });
+
+      if (attempt < retries && shouldRetry(lastError, attempt, retries)) {
+        console.warn(`Retrying in ${delay}ms... (${retries - attempt} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+      } else {
+        break;
+      }
+    }
+  }
+
+  throw lastError || new Error(ERROR_MESSAGES.UNKNOWN_ERROR);
+}
 
 export const quranService = {
   async getSurahs(): Promise<Surah[]> {
-    const response = await fetch(`${BASE_URL}/chapters?language=id`);
-    const data = await response.json();
-    return data.chapters;
+    try {
+      const data = await fetchWithRetry<{ chapters: Surah[] }>(
+        () => fetch(`${API_CONFIG.QURAN_BASE_URL}/chapters?language=id`)
+      );
+      return data.chapters || [];
+    } catch (error) {
+      const appError = handleError(error);
+      logError(appError, { method: 'getSurahs' });
+      throw appError;
+    }
   },
 
   async getSurah(id: number): Promise<Surah> {
-    const response = await fetch(`${BASE_URL}/chapters/${id}?language=id`);
-    const data = await response.json();
-    return data.chapter;
+    try {
+      validateSurahNumber(id);
+
+      const data = await fetchWithRetry<{ chapter: Surah }>(
+        () => fetch(`${API_CONFIG.QURAN_BASE_URL}/chapters/${id}?language=id`)
+      );
+      return data.chapter;
+    } catch (error) {
+      const appError = handleError(error);
+      logError(appError, { method: 'getSurah', id });
+      throw appError;
+    }
   },
 
   async searchVerses(query: string, language: string = 'id', page: number = 1): Promise<SearchResult[]> {
-    const response = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}&language=${language}&page=${page}`);
-    const data = await response.json();
-    return data.search.results || [];
+    try {
+      const sanitizedQuery = validateSearchQuery(query);
+      validatePageNumber(page);
+
+      const lang = isValidLanguage(language) ? language : 'id';
+
+      const data = await fetchWithRetry<{ search: { results: SearchResult[] } }>(
+        () => fetch(`${API_CONFIG.QURAN_BASE_URL}/search?q=${encodeURIComponent(sanitizedQuery)}&language=${lang}&page=${page}`)
+      );
+      return data.search?.results || [];
+    } catch (error) {
+      const appError = handleError(error);
+      logError(appError, { method: 'searchVerses', query, language, page });
+      throw appError;
+    }
   },
 
   async getAyahDetails(surah: number, ayah: number, translationId: number = 33): Promise<Verse> {
-    // 33 is Indonesian (Kemenag)
-    const response = await fetch(`${BASE_URL}/verses/by_key/${surah}:${ayah}?translations=${translationId}&words=true`);
-    const data = await response.json();
-    
-    const uthmaniResponse = await fetch(`${BASE_URL}/quran/verses/uthmani?verse_key=${surah}:${ayah}`);
-    const uthmaniData = await uthmaniResponse.json();
-    
-    return {
-      ...data.verse,
-      text_uthmani: uthmaniData.verses[0]?.text_uthmani
-    };
+    try {
+      validateSurahNumber(surah);
+      validateAyahNumber(ayah);
+
+      // Fetch verse with translation
+      const verseData = await fetchWithRetry<{ verse: Verse }>(
+        () => fetch(`${API_CONFIG.QURAN_BASE_URL}/verses/by_key/${surah}:${ayah}?translations=${translationId}&words=true`)
+      );
+
+      // Fetch Uthmani text
+      const uthmaniData = await fetchWithRetry<{ verses: Array<{ text_uthmani: string }> }>(
+        () => fetch(`${API_CONFIG.QURAN_BASE_URL}/quran/verses/uthmani?verse_key=${surah}:${ayah}`)
+      );
+
+      return {
+        ...verseData.verse,
+        text_uthmani: uthmaniData.verses[0]?.text_uthmani ?? ''
+      };
+    } catch (error) {
+      const appError = handleError(error);
+      logError(appError, { method: 'getAyahDetails', surah, ayah, translationId });
+      throw appError;
+    }
   }
 };

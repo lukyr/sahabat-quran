@@ -10,15 +10,15 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClick }) => {
-  const initialMessage = useMemo<ChatMessage>(() => ({ 
-    role: 'model', 
-    content: 'Assalamu’alaikum Warahmatullahi Wabarakatuh. Selamat datang di **Sahabat Quran**.\n\nSaya adalah teman virtual Anda untuk menjelajahi keindahan firman Allah. Apa yang ingin Anda pelajari hari ini?\n\n*Contoh: "Ayat tentang ketenangan hati", "Kisah Nabi Musa", atau "Tampilkan Surah Al-Fatihah"*' 
+  const initialMessage = useMemo<ChatMessage>(() => ({
+    role: 'model',
+    content: 'Assalamu’alaikum Warahmatullahi Wabarakatuh. Selamat datang di **Sahabat Quran**.\n\nSaya adalah teman virtual Anda untuk menjelajahi keindahan firman Allah. Apa yang ingin Anda pelajari hari ini?\n\n*Contoh: "Ayat tentang ketenangan hati", "Kisah Nabi Musa", atau "Tampilkan Surah Al-Fatihah"*'
   }), []);
 
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastClearTimestamp = useRef<number>(Date.now());
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -30,7 +30,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
   }, [messages, isLoading]);
 
   const handleClear = () => {
-    analyticsService.logEvent('clear_chat');
+    analyticsService.logEvent('CLEAR_CHAT');
     lastClearTimestamp.current = Date.now();
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -46,7 +46,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
 
     const requestTime = Date.now();
     const userMessage = input.trim();
-    
+
     analyticsService.trackAIChat(userMessage);
 
     const controller = new AbortController();
@@ -65,7 +65,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
         }));
 
       const response = await geminiService.chat(userMessage, apiHistory);
-      
+
       if (requestTime < lastClearTimestamp.current) return;
 
       if (response.toolCalls && response.toolCalls.length > 0) {
@@ -82,23 +82,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
           ...apiHistory,
           { role: 'user', parts: [{ text: userMessage }] },
           { role: 'model', parts: response.toolCalls.map(tc => ({ functionCall: tc })) },
-          { 
-            role: 'function', 
-            parts: toolResults.map(tr => ({ 
-              functionResponse: { name: tr.name, response: { result: tr.result } } 
-            })) 
+          {
+            role: 'function',
+            parts: toolResults.map(tr => ({
+              functionResponse: { name: tr.name, response: { result: tr.result } }
+            }))
           }
         ];
-        
+
         const finalResponse = await geminiService.chat(
-          "Tolong berikan jawaban yang lengkap. Gunakan garis pemisah --- di antara ayat. Sertakan judul referensi ayat menggunakan format ### Nama Surah (Nomor): Ayat. Pastikan setiap ayat memiliki link URL mentah (plain link) di baris baru.", 
+          "Tolong berikan jawaban yang lengkap. Gunakan garis pemisah --- di antara ayat. Sertakan judul referensi ayat menggunakan format ### Nama Surah (Nomor): Ayat. Pastikan setiap ayat memiliki link URL mentah (plain link) di baris baru.",
           toolHistory
         );
-        
+
         if (requestTime < lastClearTimestamp.current) return;
 
-        setMessages(prev => [...prev, { 
-          role: 'model', 
+        setMessages(prev => [...prev, {
+          role: 'model',
           content: finalResponse.text || "Hasil telah diproses.",
           toolResults
         }]);
@@ -128,7 +128,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
 
     let startIndex = 0;
     for (let i = index; i >= 0; i--) {
-      if (lines[i].trim() === '---') {
+      const currentLine = lines[i];
+      if (currentLine && currentLine.trim() === '---') {
         startIndex = i + 1;
         break;
       }
@@ -136,7 +137,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
 
     const arabicRegex = /[\u0600-\u06FF]/;
     for (let i = startIndex; i <= index + 2 && i < lines.length; i++) {
-      const line = lines[i].trim();
+      const currentLine = lines[i];
+      if (!currentLine) continue;
+
+      const line = currentLine.trim();
       if (!line) continue;
 
       if (line.startsWith('###')) {
@@ -156,7 +160,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
   const renderMessageContent = (content: string) => {
     if (!content) return null;
     const lines = content.replace(/<[^>]*>?/gm, '').split('\n');
-    
+
     return lines.map((line, i) => {
       if (line.trim() === '---') {
         return <div key={i} className="ayah-divider my-4 lg:my-8 opacity-20"><div className="icon"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg></div></div>;
@@ -183,7 +187,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
                 Detail Quran.com ({label})
               </button>
-              <button 
+              <button
                 onClick={() => handleInternalShare(lines, i - 1)}
                 className="inline-flex items-center gap-1.5 px-3 py-1 lg:px-4 lg:py-1.5 bg-slate-900 text-white rounded-full hover:bg-emerald-600 transition-smooth font-bold text-[10px] lg:text-xs shadow-sm"
               >
