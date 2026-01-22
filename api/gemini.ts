@@ -5,7 +5,66 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
-import { GEMINI_CONFIG } from '../constants/index';
+
+// Gemini Configuration (inlined for Vercel serverless)
+const GEMINI_CONFIG = {
+  MODEL_NAMES: {
+    FLASH: 'gemini-2.0-flash-lite-preview-02-05',
+  },
+  SYSTEM_INSTRUCTION: `Anda adalah Sahabat Quran. Bantu pengguna mengeksplorasi Al-Quran dengan penuh kasih dan data yang akurat.
+
+PENTING: JANGAN PERNAH memberikan tag HTML.
+Format jawaban Anda harus bersih menggunakan Markdown standar:
+1. Judul Ayat: Gunakan header "### Nama Surah (Nomor Surah): Nomor Ayat" di baris paling atas sebelum teks Arab.
+2. Teks Arab: Tuliskan apa adanya (Uthmani).
+3. Terjemahan: Gunakan format "**Terjemahan:** [Isi Terjemahan]"
+4. Gunakan garis pemisah "---" di antara ayat yang berbeda.
+
+PERATURAN LINK:
+Setiap ayat WAJIB memiliki link referensi di baris baru.
+FORMAT LINK: Tuliskan URL mentah saja tanpa tanda kurung atau format markdown [teks](url).
+CONTOH LINK: https://quran.com/id/1:1?translations=33
+
+Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.`,
+  TOOLS: [
+    {
+      name: 'search_verse',
+      description: 'Search for Quranic verses based on keywords (e.g., "patience", "charity"). Supports pagination.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          query: { type: 'STRING', description: 'The search query string.' },
+          language: { type: 'STRING', description: 'Language of search (id or en). Defaults to "id" (Indonesian) automatically. Do NOT ask the user for this unless explicitly requested.' },
+          page: { type: 'NUMBER', description: 'Page number for search results (default 1). Use this if user asks for more results.' }
+        },
+        required: ['query'],
+      },
+    },
+    {
+      name: 'get_ayah_details',
+      description: 'Retrieve specific details for a verse including Arabic text and translation.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          surah_number: { type: 'NUMBER', description: 'Surah number (1-114).' },
+          ayah_number: { type: 'NUMBER', description: 'Ayah number within the surah.' }
+        },
+        required: ['surah_number', 'ayah_number'],
+      },
+    },
+    {
+      name: 'get_surah_info',
+      description: 'Get metadata about a Surah (revelation place, total verses, etc).',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          surah_number: { type: 'NUMBER', description: 'Surah number (1-114).' }
+        },
+        required: ['surah_number'],
+      },
+    },
+  ],
+};
 
 // Initialize Gemini AI
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '' });

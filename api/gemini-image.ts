@@ -5,7 +5,13 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
-import { GEMINI_CONFIG } from '../constants/index';
+
+// Gemini Configuration (inlined for Vercel serverless)
+const GEMINI_CONFIG = {
+  MODEL_NAMES: {
+    IMAGE: 'gemini-2.5-flash-image',
+  },
+};
 
 // Initialize Gemini AI
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '' });

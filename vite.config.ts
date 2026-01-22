@@ -23,6 +23,16 @@ export default defineConfig(({ mode }) => {
 
     plugins: [react()],
 
+    // Proxy API requests to Express server in development
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        }
+      }
+    },
+
     build: {
       // Optimize bundle
       target: 'es2020',
