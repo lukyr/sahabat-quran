@@ -24,6 +24,5 @@
     "forceConsistentCasingInFileNames": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist", "server"]
+  "include": ["components", "constants", "services", "utils", "*.tsx", "*.ts", "vite-env.d.ts"],
 }
