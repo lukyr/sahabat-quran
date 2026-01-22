@@ -121,93 +121,209 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
     onLinkClick(url);
   };
 
-  const handleInternalShare = (lines: string[], index: number) => {
-    let reference = "Ayat Al-Quran";
-    let arabic = "";
-    let translation = "";
+  // --- New Types & Parser ---
 
-    let startIndex = 0;
-    for (let i = index; i >= 0; i--) {
-      const currentLine = lines[i];
-      if (currentLine && currentLine.trim() === '---') {
-        startIndex = i + 1;
-        break;
+  interface VerseData {
+    type: 'verse';
+    reference: string;
+    arabic: string;
+    translation: string;
+    link?: string | undefined;
+    shareLines: string[]; // For legacy share compatibility
+  }
+
+  interface TextData {
+    type: 'text';
+    content: string;
+  }
+
+  type MessageBlock = VerseData | TextData;
+
+  const [zoomedVerse, setZoomedVerse] = useState<VerseData | null>(null);
+
+  const parseMessageContent = (content: string): MessageBlock[] => {
+    if (!content) return [];
+
+    // Remove HTML tags for safer parsing, then split
+    // Note: We might want to keep some formatting, but existing code stripped tags mostly.
+    const lines = content.replace(/<[^>]*>?/gm, '').split('\n');
+    const blocks: MessageBlock[] = [];
+
+    let currentVerse: Partial<VerseData> | null = null;
+    let currentTextBuffer: string[] = [];
+    let currentShareLines: string[] = []; // To reconstruct context for share
+
+    const flushText = () => {
+      if (currentTextBuffer.length > 0) {
+        blocks.push({ type: 'text', content: currentTextBuffer.join('\n') });
+        currentTextBuffer = [];
       }
+    };
+
+    const flushVerse = () => {
+       if (currentVerse && currentVerse.reference) {
+          blocks.push({
+            type: 'verse',
+            reference: currentVerse.reference,
+            arabic: currentVerse.arabic || '',
+            translation: currentVerse.translation || '',
+            link: currentVerse.link,
+            shareLines: [...currentShareLines] // Snapshot
+          });
+       }
+       currentVerse = null;
+       currentShareLines = [];
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+       const line = lines[i].trim();
+       if (!line) {
+         if (currentVerse) {
+           // Empty line inside a verse might just be spacing?
+           // Usually Gemin output has no empty lines INSIDE verse block except before divider
+           continue;
+         }
+         // Empty line in text - ignore or keep as spacer?
+         // Original code rendered empty div h-2
+         if (currentTextBuffer.length > 0) currentTextBuffer.push('');
+         continue;
+       }
+
+       if (line === '---') {
+         // Divider usually marks end of verse
+         flushVerse();
+         flushText();
+         // We don't really need to render the divider explicitly if we use Cards
+         continue;
+       }
+
+       const headerMatch = line.match(/^###\s*(.*)/);
+       if (headerMatch) {
+          flushText();
+          flushVerse(); // Close previous if exists
+          currentVerse = { reference: headerMatch[1] || '', arabic: '', translation: '' };
+          currentShareLines = [line];
+          continue;
+       }
+
+       const urlRegex = /(https?:\/\/quran\.com\/[^\s\)]+)/g;
+       if (urlRegex.test(line)) {
+          if (currentVerse) {
+             const urlMatch = line.match(urlRegex)?.[0];
+             if (urlMatch) currentVerse.link = urlMatch.replace(/[\]\)]+$/, '');
+             currentShareLines.push(line);
+          } else {
+             // Link outside verse? Treat as text
+             currentTextBuffer.push(line);
+          }
+          continue;
+       }
+
+       const arabicRegex = /[\u0600-\u06FF]/;
+       if (arabicRegex.test(line)) {
+          if (currentVerse) {
+             currentVerse.arabic = line;
+             currentShareLines.push(line);
+          } else {
+             currentTextBuffer.push(line); // Arabic in normal text
+          }
+           continue;
+       }
+
+       if (currentVerse) {
+          // Translation logic
+           let trans = line;
+           if (line.toLowerCase().includes('terjemahan:')) {
+             trans = line.replace(/(\*\*)*Terjemahan:(\*\*)*\s*/i, '').trim();
+           }
+           if (currentVerse.translation) currentVerse.translation += ' ' + trans;
+           else currentVerse.translation = trans;
+           currentShareLines.push(line);
+       } else {
+          currentTextBuffer.push(line);
+       }
     }
 
-    const arabicRegex = /[\u0600-\u06FF]/;
-    for (let i = startIndex; i <= index + 2 && i < lines.length; i++) {
-      const currentLine = lines[i];
-      if (!currentLine) continue;
+    // Flush remaining
+    flushVerse();
+    flushText();
 
-      const line = currentLine.trim();
-      if (!line) continue;
-
-      if (line.startsWith('###')) {
-        reference = line.replace('###', '').trim();
-      } else if (arabicRegex.test(line)) {
-        arabic = line;
-      } else if (line.toLowerCase().includes('terjemahan:')) {
-        translation = line.replace(/(\*\*)*Terjemahan:(\*\*)*\s*/i, '').trim();
-      } else if (translation === "" && !line.match(/https?:\/\/quran\.com/) && !line.startsWith('###') && !arabicRegex.test(line)) {
-        translation = line;
-      }
-    }
-
-    onShareClick({ arabic, translation, reference });
+    return blocks;
   };
 
   const renderMessageContent = (content: string) => {
-    if (!content) return null;
-    const lines = content.replace(/<[^>]*>?/gm, '').split('\n');
+    const blocks = parseMessageContent(content);
 
-    return lines.map((line, i) => {
-      if (line.trim() === '---') {
-        return <div key={i} className="ayah-divider my-4 lg:my-8 opacity-20"><div className="icon"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg></div></div>;
-      }
+    return (
+      <div className="space-y-4">
+        {blocks.map((block, idx) => {
+          if (block.type === 'text') {
+             // Render Markdown-ish text
+             return block.content.split('\n').map((line, lIdx) => {
+                 if (!line.trim()) return <div key={`t-${idx}-${lIdx}`} className="h-2" />;
+                 const processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                 return <p key={`t-${idx}-${lIdx}`} className="text-slate-600 leading-relaxed text-[14px] lg:text-[15px] font-medium my-1" dangerouslySetInnerHTML={{ __html: processedLine }} />;
+             });
+          } else {
+             // Verse Card
+             const v = block as VerseData;
+             const labelMatch = v.link?.match(/quran\.com\/(?:id\/)?(\d+:\d+)/);
+             const label = labelMatch ? labelMatch[1] : 'Lihat Ayat';
 
-      const headerMatch = line.match(/^###\s*(.*)/);
-      if (headerMatch) {
-        return <div key={i} className="my-4"><span className="inline-flex items-center px-4 py-1.5 bg-emerald-600 text-white rounded-full text-[11px] lg:text-xs font-bold shadow-md shadow-emerald-200 tracking-wide uppercase">{headerMatch[1]}</span></div>;
-      }
+             return (
+               <div key={`v-${idx}`} className="group relative bg-white rounded-2xl border border-emerald-50 p-4 hover:shadow-md transition-all cursor-zoom-in" onClick={() => setZoomedVerse(v)}>
+                  {/* Reference Badge */}
+                  <div className="mb-4">
+                     <span className="inline-flex items-center px-4 py-1.5 bg-emerald-600 text-white rounded-full text-[11px] lg:text-xs font-bold shadow-md shadow-emerald-200 tracking-wide uppercase">
+                       {v.reference}
+                     </span>
+                  </div>
 
-      // Regex URL yang lebih robust untuk menangkap link quran.com
-      const urlRegex = /(https?:\/\/quran\.com\/[^\s\)]+)/g;
-      if (urlRegex.test(line)) {
-        const urlMatch = line.match(urlRegex)?.[0];
-        if (urlMatch) {
-          // Bersihkan URL dari sisa-sisa karakter markdown jika ada
-          const cleanUrl = urlMatch.replace(/[\]\)]+$/, '');
-          const labelMatch = cleanUrl.match(/quran\.com\/(?:id\/)?(\d+:\d+)/);
-          const label = labelMatch ? labelMatch[1] : 'Lihat Ayat';
+                  {/* Arabic */}
+                  <div className="font-arabic text-2xl lg:text-3xl text-right text-slate-900 mb-4 leading-[2.5] tracking-wide dir-rtl">
+                     {v.arabic}
+                  </div>
 
-          return (
-            <div key={i} className="my-2 flex flex-wrap gap-2">
-              <button onClick={() => handleLinkClick(cleanUrl)} className="inline-flex items-center gap-1.5 px-3 py-1 lg:px-4 lg:py-1.5 bg-emerald-50 text-emerald-700 rounded-full hover:bg-emerald-600 hover:text-white transition-smooth border border-emerald-100 font-bold text-[10px] lg:text-xs shadow-sm">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
-                Detail Quran.com ({label})
-              </button>
-              <button
-                onClick={() => handleInternalShare(lines, i - 1)}
-                className="inline-flex items-center gap-1.5 px-3 py-1 lg:px-4 lg:py-1.5 bg-slate-900 text-white rounded-full hover:bg-emerald-600 transition-smooth font-bold text-[10px] lg:text-xs shadow-sm"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                Bagi Gambar
-              </button>
-            </div>
-          );
-        }
-      }
+                  {/* Translation */}
+                  <div className="text-slate-600 text-[14px] lg:text-[15px] italic mb-4 leading-relaxed border-l-2 border-emerald-100 pl-3">
+                     "{v.translation}"
+                  </div>
 
-      const arabicRegex = /[\u0600-\u06FF]/;
-      if (arabicRegex.test(line)) {
-        return <div key={i} className="font-arabic text-2xl lg:text-3xl text-slate-900 my-4 lg:my-6 tracking-wide leading-[2.5] drop-shadow-sm">{line}</div>;
-      }
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                     {v.link && (
+                       <button
+                         onClick={(e) => { e.stopPropagation(); handleLinkClick(v.link!); }}
+                         className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full hover:bg-emerald-600 hover:text-white transition-smooth border border-emerald-100 font-bold text-[10px] shadow-sm"
+                       >
+                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z"/></svg>
+                         Detail {label}
+                       </button>
+                     )}
+                     <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Internal share expects lines and index. We can define a simplified handler or reconstruct context.
+                          // For now, let's call onShareClick directly since we have the data!
+                          onShareClick({ arabic: v.arabic, translation: v.translation, reference: v.reference });
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 text-white rounded-full hover:bg-emerald-600 transition-smooth font-bold text-[10px] shadow-sm"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                        Bagi Gambar
+                      </button>
+                  </div>
 
-      const processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      if (line.trim() === '') return <div key={i} className="h-2"></div>;
-      return <p key={i} className="text-slate-600 leading-relaxed text-[14px] lg:text-[15px] font-medium my-1" dangerouslySetInnerHTML={{ __html: processedLine }} />;
-    });
+                  {/* Zoom Hint */}
+                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 pointer-events-none">
+                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                   </div>
+               </div>
+             );
+          }
+        })}
+      </div>
+    );
   };
 
   return (
@@ -240,6 +356,39 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
           <button type="submit" disabled={isLoading || !input.trim()} className="p-3 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 disabled:opacity-20 active:scale-95 flex items-center justify-center shrink-0"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button>
         </div>
       </form>
+
+      {/* --- Zoom Modal Overlay --- */}
+      {zoomedVerse && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/95 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setZoomedVerse(null)}>
+           <div className="relative w-full max-w-2xl bg-white rounded-3xl p-8 shadow-2xl border border-slate-100 transform transition-all scale-100" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => setZoomedVerse(null)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
+                <svg className="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+
+              <div className="text-center">
+                 <span className="inline-block px-4 py-1.5 bg-emerald-600 text-white rounded-full text-sm font-bold shadow-md shadow-emerald-200 tracking-wide uppercase mb-8">
+                   {zoomedVerse.reference}
+                 </span>
+
+                 <div className="font-arabic text-4xl lg:text-5xl text-center text-slate-900 mb-8 leading-[2.5] tracking-wide dir-rtl">
+                   {zoomedVerse.arabic}
+                 </div>
+
+                 <div className="text-slate-600 text-lg lg:text-xl italic leading-relaxed font-serif">
+                   "{zoomedVerse.translation}"
+                 </div>
+
+                 {zoomedVerse.link && (
+                    <div className="mt-8 flex justify-center gap-4">
+                       <button onClick={() => handleLinkClick(zoomedVerse.link!)} className="px-6 py-2 bg-emerald-50 text-emerald-700 rounded-full hover:bg-emerald-600 hover:text-white transition-colors font-bold text-sm">
+                         Buka di Quran.com
+                       </button>
+                    </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
