@@ -8,13 +8,16 @@ export const InstallPWA: React.FC = () => {
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    // Check if already installed (standalone mode)
+    // Check if already installed (standalone mode) or manually dismissed
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
                                (window.navigator as any).standalone === true;
 
+    // Check if user previously dismissed or installed
+    const isDismissed = localStorage.getItem('pwa_prompt_dismissed') === 'true';
+
     setIsStandalone(isInStandaloneMode);
 
-    if (isInStandaloneMode) return;
+    if (isInStandaloneMode || isDismissed) return;
 
     // Check if iOS
     const iosClient = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
@@ -29,15 +32,33 @@ export const InstallPWA: React.FC = () => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowBanner(true);
+      // Only show if not dismissed
+      if (!localStorage.getItem('pwa_prompt_dismissed')) {
+         setShowBanner(true);
+      }
+    };
+
+    // Handle successful installation
+    const handleAppInstalled = () => {
+      setShowBanner(false);
+      setDeferredPrompt(null);
+      localStorage.setItem('pwa_prompt_dismissed', 'true');
+      console.log('PWA installation successful');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
+
+  const handleDismiss = () => {
+    setShowBanner(false);
+    localStorage.setItem('pwa_prompt_dismissed', 'true');
+  };
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -45,6 +66,9 @@ export const InstallPWA: React.FC = () => {
       const choiceResult = await deferredPrompt.userChoice;
       if (choiceResult.outcome === 'accepted') {
         setShowBanner(false);
+        // We don't set dismissed here immediately, 'appinstalled' will handle it.
+        // But for safety if event misses:
+        setTimeout(() => localStorage.setItem('pwa_prompt_dismissed', 'true'), 1000);
       }
       setDeferredPrompt(null);
     }
@@ -65,8 +89,9 @@ export const InstallPWA: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowBanner(false)}
+              onClick={handleDismiss}
               className="p-2 text-slate-400 hover:text-white transition-colors"
+              aria-label="Tutup"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
