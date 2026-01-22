@@ -19,6 +19,7 @@
     "react-dom": "^19.2.3"
   },
   "devDependencies": {
+    "@types/node": "^25.0.10",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vercel/node": "^5.5.25",

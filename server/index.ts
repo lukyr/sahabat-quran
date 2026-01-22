@@ -1,5 +1,5 @@
 // ... imports
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { GoogleGenAI } from '@google/genai';
@@ -32,12 +32,12 @@ const imageLimiter = rateLimit({
 });
 
 // Health check
-app.get('/health', (_, res) => {
+app.get('/health', (_: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Chat endpoint
-app.post('/api/gemini', chatLimiter, async (req, res) => {
+app.post('/api/gemini', chatLimiter, async (req: Request, res: Response) => {
   try {
     const { message, history } = req.body;
 
@@ -84,7 +84,7 @@ app.post('/api/gemini', chatLimiter, async (req, res) => {
 });
 
 // Image generation endpoint
-app.post('/api/gemini-image', imageLimiter, async (req, res) => {
+app.post('/api/gemini-image', imageLimiter, async (req: Request, res: Response) => {
   try {
     const { theme } = req.body;
 
