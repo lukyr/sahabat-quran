@@ -1,132 +1,172 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- Primary Meta Tags -->
-  <title>Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI</title>
-  <meta name="title" content="Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI">
-  <meta name="description" content="Sahabat Quran adalah aplikasi cerdas untuk mencari ayat Al-Quran, terjemahan, dan inspirasi harian menggunakan teknologi AI. Temukan makna Al-Quran lebih dalam dan mudah.">
-  <meta name="keywords" content="Al-Quran online, cari ayat quran, tafsir quran, sahabat quran, AI quran, terjemahan indonesia, aplikasi islam">
-  <meta name="author" content="Sahabat Quran Team">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://sahabatquran.com/">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://sahabatquran.com/">
-  <meta property="og:title" content="Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI">
-  <meta property="og:description" content="Aplikasi cerdas untuk mengeksplorasi Al-Quran dengan bantuan AI. Temukan rujukan ayat dan makna dengan cepat dan akurat.">
-  <meta property="og:image" content="https://sahabatquran.com/og-image.jpg">
+    <!-- Primary Meta Tags -->
+    <title>Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI</title>
+    <meta
+      name="title"
+      content="Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI"
+    />
+    <meta
+      name="description"
+      content="Sahabat Quran adalah aplikasi cerdas untuk mencari ayat Al-Quran, terjemahan, dan inspirasi harian menggunakan teknologi AI. Temukan makna Al-Quran lebih dalam dan mudah."
+    />
+    <meta
+      name="keywords"
+      content="Al-Quran online, cari ayat quran, tafsir quran, sahabat quran, AI quran, terjemahan indonesia, aplikasi islam"
+    />
+    <meta name="author" content="Sahabat Quran Team" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://sahabatquran.com/" />
 
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://sahabatquran.com/">
-  <meta property="twitter:title" content="Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI">
-  <meta property="twitter:description" content="Aplikasi cerdas untuk mengeksplorasi Al-Quran dengan bantuan AI.">
-  <meta property="twitter:image" content="https://sahabatquran.com/og-image.jpg">
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sahabatquran.com/" />
+    <meta
+      property="og:title"
+      content="Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI"
+    />
+    <meta
+      property="og:description"
+      content="Aplikasi cerdas untuk mengeksplorasi Al-Quran dengan bantuan AI. Temukan rujukan ayat dan makna dengan cepat dan akurat."
+    />
+    <meta property="og:image" content="https://sahabatquran.com/og-image.jpg" />
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="/favicon.png">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://sahabatquran.com/" />
+    <meta
+      property="twitter:title"
+      content="Sahabat Quran - Jelajahi & Cari Ayat Al-Quran dengan AI"
+    />
+    <meta
+      property="twitter:description"
+      content="Aplikasi cerdas untuk mengeksplorasi Al-Quran dengan bantuan AI."
+    />
+    <meta
+      property="twitter:image"
+      content="https://sahabatquran.com/og-image.jpg"
+    />
 
-  <!-- Structured Data (JSON-LD) -->
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Sahabat Quran",
-      "url": "https://sahabatquran.com/",
-      "description": "Aplikasi cerdas untuk mencari ayat Al-Quran dan terjemahan menggunakan teknologi AI.",
-      "applicationCategory": "EducationalApplication",
-      "operatingSystem": "All",
-      "author": {
-        "@type": "Organization",
-        "name": "Sahabat Quran Project"
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "IDR"
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Sahabat Quran",
+        "url": "https://sahabatquran.com/",
+        "description": "Aplikasi cerdas untuk mencari ayat Al-Quran dan terjemahan menggunakan teknologi AI.",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "All",
+        "author": {
+          "@type": "Organization",
+          "name": "Sahabat Quran Project"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "IDR"
+        }
       }
-    }
-  </script>
+    </script>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --quran-green: #2ca4ab;
-      --quran-green-dark: #1f7a81;
-    }
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      color: #1a1a1a;
-      background-color: #fafafa;
-    }
-    .font-arabic {
-      font-family: 'Amiri', 'Scheherazade New', serif;
-      line-height: 2.4;
-      direction: rtl;
-      text-align: right;
-    }
-    .islamic-bg {
-      background-image: radial-gradient(#e5e7eb 0.5px, transparent 0.5px);
-      background-size: 24px 24px;
-    }
-    .transition-smooth {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    ::-webkit-scrollbar {
-      width: 5px;
-    }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 20px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-    .ayah-divider {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 2rem 0;
-      opacity: 0.4;
-    }
-    .ayah-divider::before, .ayah-divider::after {
-      content: "";
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(to right, transparent, #2ca4ab, transparent);
-    }
-    .ayah-divider .icon {
-      margin: 0 1rem;
-      color: #2ca4ab;
-    }
-  </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
-  }
-}
-</script>
-</head>
-<body class="islamic-bg">
-  <h1 class="sr-only">Sahabat Quran - Cari dan Pelajari Al-Quran dengan Kecerdasan Buatan (AI)</h1>
-  <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --quran-green: #2ca4ab;
+        --quran-green-dark: #1f7a81;
+      }
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        color: #1a1a1a;
+        background-color: #fafafa;
+      }
+      .font-arabic {
+        font-family: "Amiri", "Scheherazade New", serif;
+        line-height: 2.4;
+        direction: rtl;
+        text-align: right;
+      }
+      .islamic-bg {
+        background-image: radial-gradient(#e5e7eb 0.5px, transparent 0.5px);
+        background-size: 24px 24px;
+      }
+      .transition-smooth {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      ::-webkit-scrollbar {
+        width: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 20px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+      .ayah-divider {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 2rem 0;
+        opacity: 0.4;
+      }
+      .ayah-divider::before,
+      .ayah-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          #2ca4ab,
+          transparent
+        );
+      }
+      .ayah-divider .icon {
+        margin: 0 1rem;
+        color: #2ca4ab;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@^19.2.3",
+          "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+          "react/": "https://esm.sh/react@^19.2.3/",
+          "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
+          "vite": "https://esm.sh/vite@^7.3.1",
+          "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+        }
+      }
+    </script>
+  </head>
+  <body class="islamic-bg">
+    <h1 class="sr-only">
+      Sahabat Quran - Cari dan Pelajari Al-Quran dengan Kecerdasan Buatan (AI)
+    </h1>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>
