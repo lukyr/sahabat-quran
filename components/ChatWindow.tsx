@@ -273,7 +273,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
              return (
                <div key={`v-${idx}`} className="group relative bg-white rounded-2xl border border-emerald-50 p-4 hover:shadow-md transition-all cursor-zoom-in" onClick={() => setZoomedVerse(v)}>
                   {/* Reference Badge */}
-                  <div className="mb-4">
+                  <div className="mb-8">
                      <span className="inline-flex items-center px-4 py-1.5 bg-emerald-600 text-white rounded-full text-[11px] lg:text-xs font-bold shadow-md shadow-emerald-200 tracking-wide uppercase">
                        {v.reference}
                      </span>
@@ -360,7 +360,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
       {/* --- Zoom Modal Overlay --- */}
       {zoomedVerse && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/95 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setZoomedVerse(null)}>
-           <div className="relative w-full max-w-2xl bg-white rounded-3xl p-8 shadow-2xl border border-slate-100 transform transition-all scale-100" onClick={(e) => e.stopPropagation()}>
+           <div className="relative w-full max-w-2xl bg-white rounded-3xl p-6 lg:p-8 shadow-2xl border border-slate-100 transform transition-all scale-100 max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
               <button onClick={() => setZoomedVerse(null)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
                 <svg className="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
