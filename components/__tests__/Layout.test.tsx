@@ -4,10 +4,10 @@ import { Layout } from '../Layout';
 
 // Mock the global __APP_VERSION__
 declare global {
-  var __APP_VERSION__: string;
+  const __APP_VERSION__: string;
 }
 
-globalThis.__APP_VERSION__ = '1.0.0';
+(globalThis as any).__APP_VERSION__ = '1.0.0';
 
 describe('Layout Component', () => {
   it('renders children correctly', () => {

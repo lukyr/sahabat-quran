@@ -6,6 +6,7 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -25,4 +26,5 @@
     "exactOptionalPropertyTypes": true
   },
   "include": ["components", "constants", "services", "utils", "*.tsx", "*.ts", "vite-env.d.ts"],
+  "exclude": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "test/**"]
 }
