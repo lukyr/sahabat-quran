@@ -406,7 +406,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
 
       <form onSubmit={handleSubmit} className="p-4 lg:p-8 bg-white border-t border-slate-100">
         <div className="relative flex items-center max-w-4xl mx-auto gap-2">
-          <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Tanya Al-Quran..." className="flex-1 bg-slate-50 border-2 border-slate-50 rounded-2xl py-3 px-5 text-sm font-semibold focus:outline-none focus:bg-white focus:border-emerald-500/20 transition-smooth" />
+          <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Apa yang ingin kamu pelajari dari Al-Quran hari ini?" className="flex-1 bg-slate-50 border-2 border-slate-50 rounded-2xl py-3 px-5 text-sm font-semibold focus:outline-none focus:bg-white focus:border-emerald-500/20 transition-smooth" />
           <button type="submit" disabled={isLoading || !input.trim()} className="p-3 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 disabled:opacity-20 active:scale-95 flex items-center justify-center shrink-0"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg></button>
         </div>
       </form>
