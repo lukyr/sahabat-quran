@@ -91,10 +91,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
       rel="stylesheet"
     />
     <style>
+      /* Quran.com Official UthmanicHafs Font */
+      @font-face {
+        font-family: 'UthmanicHafs';
+        src: url('https://quran.com/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
       :root {
         --quran-green: #2ca4ab;
         --quran-green-dark: #1f7a81;
@@ -105,10 +114,13 @@
         background-color: #fafafa;
       }
       .font-arabic {
-        font-family: "Amiri", "Scheherazade New", serif;
-        line-height: 2.4;
+        font-family: "UthmanicHafs", serif;
+        line-height: 1.27;
         direction: rtl;
         text-align: right;
+        font-weight: 400;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
       .islamic-bg {
         background-image: radial-gradient(#e5e7eb 0.5px, transparent 0.5px);

@@ -31,7 +31,7 @@ export const SurahBrowser: React.FC<SurahBrowserProps> = ({ onReadSurah }) => {
     onReadSurah(url);
   };
 
-  const filtered = surahs.filter(s => 
+  const filtered = surahs.filter(s =>
     s.name_simple.toLowerCase().includes(filter.toLowerCase()) ||
     s.translated_name.name.toLowerCase().includes(filter.toLowerCase())
   );
@@ -60,7 +60,7 @@ export const SurahBrowser: React.FC<SurahBrowserProps> = ({ onReadSurah }) => {
           </svg>
         </div>
       </div>
-      
+
       <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
         {loading ? (
           <div className="space-y-3 px-4">
@@ -85,9 +85,9 @@ export const SurahBrowser: React.FC<SurahBrowserProps> = ({ onReadSurah }) => {
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{surah.translated_name.name} • {surah.verses_count} Ayat</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
-                  <span className="font-arabic text-2xl text-slate-300 group-hover:text-emerald-800 transition-smooth">
+                  <span className="font-arabic text-[32px] text-slate-300 group-hover:text-emerald-800 transition-smooth">
                     {surah.name_arabic}
                   </span>
                 </div>

@@ -284,7 +284,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
                   </div>
 
                   {/* Arabic */}
-                  <div className="font-arabic text-2xl lg:text-3xl text-right text-slate-900 mb-4 leading-[2.5] tracking-wide dir-rtl">
+                  <div className="font-arabic text-[32px] lg:text-[41px] text-right text-slate-900 mb-4 dir-rtl">
                      {v.arabic}
                   </div>
 
@@ -377,7 +377,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
                        {(zoomedVerse as VerseData).reference}
                      </span>
 
-                     <div className="font-arabic text-4xl lg:text-5xl text-center text-slate-900 mb-8 leading-[2.5] tracking-wide dir-rtl">
+                     <div className="font-arabic text-[48px] lg:text-[56px] text-center text-slate-900 mb-8 dir-rtl">
                        {(zoomedVerse as VerseData).arabic}
                      </div>
 
