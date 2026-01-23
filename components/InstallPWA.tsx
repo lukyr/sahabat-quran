@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { analyticsService } from '../services/analyticsService';
 
 export const InstallPWA: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -35,6 +36,8 @@ export const InstallPWA: React.FC = () => {
       // Only show if not dismissed
       if (!localStorage.getItem('pwa_prompt_dismissed')) {
          setShowBanner(true);
+         // Track PWA prompt shown
+         analyticsService.trackPWAPromptShown('android');
       }
     };
 
@@ -43,6 +46,11 @@ export const InstallPWA: React.FC = () => {
       setShowBanner(false);
       setDeferredPrompt(null);
       localStorage.setItem('pwa_prompt_dismissed', 'true');
+
+      // Track PWA installation (KEY CONVERSION)
+      const platform = isIOS ? 'ios' : 'android';
+      analyticsService.trackPWAInstalled(platform, 'prompt');
+
       console.log('PWA installation successful');
     };
 
@@ -58,17 +66,27 @@ export const InstallPWA: React.FC = () => {
   const handleDismiss = () => {
     setShowBanner(false);
     localStorage.setItem('pwa_prompt_dismissed', 'true');
+
+    // Track PWA prompt dismissed
+    const platform = isIOS ? 'ios' : 'android';
+    analyticsService.trackPWAPromptDismissed(platform);
   };
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const choiceResult = await deferredPrompt.userChoice;
+
       if (choiceResult.outcome === 'accepted') {
         setShowBanner(false);
+        // Track PWA prompt accepted
+        analyticsService.trackPWAPromptAccepted('android');
         // We don't set dismissed here immediately, 'appinstalled' will handle it.
         // But for safety if event misses:
         setTimeout(() => localStorage.setItem('pwa_prompt_dismissed', 'true'), 1000);
+      } else {
+        // User declined
+        analyticsService.trackPWAPromptDismissed('android');
       }
       setDeferredPrompt(null);
     }
@@ -98,7 +116,10 @@ export const InstallPWA: React.FC = () => {
 
             {isIOS ? (
               <button
-                onClick={() => setShowIOSInstructions(true)}
+                onClick={() => {
+                  setShowIOSInstructions(true);
+                  analyticsService.trackIOSInstructionsShown();
+                }}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition-transform active:scale-95 whitespace-nowrap"
               >
                 Cara Install

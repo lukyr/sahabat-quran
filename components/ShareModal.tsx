@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { geminiService } from '../services/geminiService';
+import { analyticsService } from '../services/analyticsService';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  
+
   // Cache sederhana untuk mencegah regenerasi gambar jika user bolak-balik buka modal ayat yang sama
   const imageCache = useRef<Record<string, string>>({});
 
@@ -33,13 +34,23 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
   const generateImage = async (cacheKey: string) => {
     if (!verseData) return;
     setIsLoading(true);
+    const startTime = Date.now();
+
     try {
       const theme = `${verseData.reference}: ${verseData.translation.substring(0, 50)}`;
       const img = await geminiService.generateVerseImage(theme);
       imageCache.current[cacheKey] = img;
       setImageUrl(img);
+
+      // Track successful image generation
+      const generationTime = Date.now() - startTime;
+      const [surah, ayah] = verseData.reference.split(':').map(s => s.trim());
+      analyticsService.trackImageGeneration(generationTime, surah || 'unknown', ayah || 'unknown');
     } catch (error) {
       console.error(error);
+
+      // Track image generation error
+      analyticsService.trackError('image_generation_error' as any, error instanceof Error ? error.message : 'Unknown error', 'share_modal');
     } finally {
       setIsLoading(false);
     }
@@ -142,7 +153,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
   };
 
   const handleDownload = () => {
-    if (!imageUrl) return;
+    if (!imageUrl || !verseData) return;
+
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = imageUrl;
@@ -153,6 +165,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
         link.href = canvas.toDataURL('image/png');
         link.download = `sahabatquran-${verseData?.reference.replace(/\s+/g, '-').toLowerCase()}.png`;
         link.click();
+
+        // Track image download
+        const [surah, ayah] = verseData.reference.split(':').map(s => s.trim());
+        analyticsService.trackImageDownload(surah || 'unknown', ayah || 'unknown');
+        analyticsService.trackShareSuccess('download', surah || 'unknown', ayah || 'unknown');
       }
     };
   };
@@ -160,21 +177,33 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
   const handleShareFile = async () => {
     if (!imageUrl || !verseData) return;
     setIsSharing(true);
-    
+
+    // Track share attempt
+    const [surah, ayah] = verseData.reference.split(':').map(s => s.trim());
+    analyticsService.trackShareAttempt(surah || 'unknown', ayah || 'unknown', verseData.reference);
+
     try {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.src = imageUrl;
-      
+
       img.onload = async () => {
         const canvas = getProcessedCanvas(img);
-        if (!canvas) return;
+        if (!canvas) {
+          analyticsService.trackShareFailed('Canvas generation failed');
+          setIsSharing(false);
+          return;
+        }
 
         canvas.toBlob(async (blob) => {
-          if (!blob) return;
-          
+          if (!blob) {
+            analyticsService.trackShareFailed('Blob conversion failed');
+            setIsSharing(false);
+            return;
+          }
+
           const file = new File([blob], `sahabatquran-${verseData.reference.toLowerCase()}.png`, { type: 'image/png' });
-          
+
           if (navigator.share && navigator.canShare({ files: [file] })) {
             try {
               await navigator.share({
@@ -182,10 +211,20 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
                 title: 'Inspirasi Sahabat Quran',
                 text: `"${verseData.translation}" — ${verseData.reference}`,
               });
+
+              // Track successful share
+              analyticsService.trackShareSuccess('native', surah || 'unknown', ayah || 'unknown');
             } catch (err) {
               console.log("Share cancelled or failed", err);
+
+              // Track share cancellation/failure
+              const errorMsg = err instanceof Error ? err.message : 'Share cancelled';
+              if (!errorMsg.includes('cancel')) {
+                analyticsService.trackShareFailed(errorMsg);
+              }
             }
           } else {
+            // Fallback to download
             handleDownload();
           }
           setIsSharing(false);
@@ -193,6 +232,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
       };
     } catch (error) {
       console.error("Error sharing", error);
+      analyticsService.trackShareFailed(error instanceof Error ? error.message : 'Unknown error');
       setIsSharing(false);
     }
   };
@@ -202,7 +242,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={onClose}></div>
-      
+
       <div className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         <div className="p-6 border-b border-slate-50 flex justify-between items-center">
           <h3 className="font-extrabold text-slate-900">Bagi Inspirasi Quran</h3>
@@ -237,7 +277,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
 
           {!isLoading && imageUrl && (
             <div className="mt-8 space-y-4">
-              <button 
+              <button
                 onClick={handleShareFile}
                 disabled={isSharing}
                 className="w-full flex items-center justify-center gap-3 py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm shadow-xl hover:bg-emerald-600 transition-smooth disabled:opacity-50"
@@ -259,7 +299,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={handleDownload}
                 className="w-full flex items-center justify-center gap-2 py-4 border-2 border-slate-100 text-slate-600 rounded-2xl font-bold text-sm hover:bg-slate-50 transition-smooth"
               >
@@ -269,7 +309,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
             </div>
           )}
         </div>
-        
+
         <div className="p-4 bg-slate-50 text-[9px] text-center font-bold text-slate-400 uppercase tracking-widest border-t border-slate-100">
           Powered by Gemini AI & Sahabat Quran
         </div>

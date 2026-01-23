@@ -27,6 +27,7 @@ export const SurahBrowser: React.FC<SurahBrowserProps> = ({ onReadSurah }) => {
 
   const handleSurahClick = (surah: Surah) => {
     const url = `https://quran.com/id/${surah.id}?translations=33`;
+    analyticsService.trackSurahSelection(surah.id, surah.name_simple);
     analyticsService.trackViewSurah(url);
     onReadSurah(url);
   };

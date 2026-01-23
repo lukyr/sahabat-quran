@@ -97,19 +97,42 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
 
         if (requestTime < lastClearTimestamp.current) return;
 
+        // Track successful AI query with response time and tools used
+        const responseTime = Date.now() - requestTime;
+        const toolsUsed = response.toolCalls.map(tc => tc.name);
+        analyticsService.trackAISuccess(responseTime, toolsUsed);
+
         setMessages(prev => [...prev, {
           role: 'model',
           content: finalResponse.text || "Hasil telah diproses.",
           toolResults
         }]);
       } else {
+        // Track success even without tools
+        const responseTime = Date.now() - requestTime;
+        analyticsService.trackAISuccess(responseTime, []);
+
         setMessages(prev => [...prev, { role: 'model', content: response.text }]);
       }
     } catch (error: any) {
       if (requestTime < lastClearTimestamp.current) return;
       console.error(error);
+
+      // Track AI error with type
+      let errorType = 'unknown_error';
       let errorMsg = "Maaf, Sahabat Quran sedang mengalami sedikit kendala.";
-      if (error?.message?.includes('429')) errorMsg = "Kuota harian habis. Silakan coba lagi nanti.";
+
+      if (error?.message?.includes('429')) {
+        errorType = 'rate_limit_error';
+        errorMsg = "Kuota harian habis. Silakan coba lagi nanti.";
+      } else if (error?.message?.includes('403')) {
+        errorType = 'quota_error';
+      } else if (error?.message?.includes('network')) {
+        errorType = 'network_error';
+      }
+
+      analyticsService.trackAIError(errorType as any, error?.message || 'Unknown error');
+
       setMessages(prev => [...prev, { role: 'model', content: errorMsg }]);
     } finally {
       if (requestTime >= lastClearTimestamp.current) setIsLoading(false);
@@ -118,6 +141,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
 
   const handleLinkClick = (url: string) => {
     analyticsService.trackViewSurah(url);
+    analyticsService.trackExternalLink(url, 'Quran.com');
     onLinkClick(url);
   };
 
@@ -140,6 +164,31 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
   type MessageBlock = VerseData | TextData;
 
   const [zoomedVerse, setZoomedVerse] = useState<MessageBlock | null>(null);
+  const [zoomStartTime, setZoomStartTime] = useState<number | null>(null);
+
+  // Handle verse zoom with analytics
+  const handleVerseZoom = (verse: MessageBlock) => {
+    setZoomedVerse(verse);
+    setZoomStartTime(Date.now());
+
+    if (verse.type === 'verse') {
+      const verseData = verse as VerseData;
+      const [surah, ayah] = verseData.reference.split(':').map(s => s.trim());
+      analyticsService.trackVerseZoom(surah || 'unknown', ayah || 'unknown');
+    }
+  };
+
+  // Handle verse zoom close with reading time
+  const handleVerseZoomClose = () => {
+    if (zoomedVerse && zoomedVerse.type === 'verse' && zoomStartTime) {
+      const duration = Math.floor((Date.now() - zoomStartTime) / 1000); // seconds
+      const verseData = zoomedVerse as VerseData;
+      const [surah, ayah] = verseData.reference.split(':').map(s => s.trim());
+      analyticsService.trackVerseZoomClose(surah || 'unknown', ayah || 'unknown', duration);
+    }
+    setZoomedVerse(null);
+    setZoomStartTime(null);
+  };
 
   const parseMessageContent = (content: string): MessageBlock[] => {
     if (!content) return [];
@@ -275,7 +324,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
              const label = labelMatch ? labelMatch[1] : 'Lihat Ayat';
 
              return (
-               <div key={`v-${idx}`} className="group relative bg-white rounded-2xl border border-emerald-50 p-4 hover:shadow-md transition-all cursor-zoom-in" onClick={() => setZoomedVerse(v)}>
+               <div key={`v-${idx}`} className="group relative bg-white rounded-2xl border border-emerald-50 p-4 hover:shadow-md transition-all cursor-zoom-in" onClick={() => handleVerseZoom(v)}>
                   {/* Reference Badge */}
                   <div className="mb-8">
                      <span className="inline-flex items-center px-4 py-1.5 bg-emerald-600 text-white rounded-full text-[11px] lg:text-xs font-bold shadow-md shadow-emerald-200 tracking-wide uppercase">
@@ -364,9 +413,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onLinkClick, onShareClic
 
       {/* --- Zoom Modal Overlay --- */}
       {zoomedVerse && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/95 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setZoomedVerse(null)}>
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/95 backdrop-blur-sm animate-in fade-in duration-200" onClick={handleVerseZoomClose}>
            <div className="relative w-full max-w-2xl bg-white rounded-3xl p-6 lg:p-8 shadow-2xl border border-slate-100 transform transition-all scale-100 max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => setZoomedVerse(null)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
+              <button onClick={handleVerseZoomClose} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
                 <svg className="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
 

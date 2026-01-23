@@ -7,6 +7,7 @@ import { Modal } from './components/Modal';
 import { ShareModal } from './components/ShareModal';
 import { InstallPWA } from './components/InstallPWA';
 import { analyticsService } from './services/analyticsService';
+import { initWebVitals } from './utils/webVitals';
 
 const App: React.FC = () => {
   const [modalState, setModalState] = useState<{ isOpen: boolean; url: string }>({
@@ -23,23 +24,31 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+    // Initialize analytics
     analyticsService.init();
+
+    // Initialize Core Web Vitals tracking for SEO
+    initWebVitals();
   }, []);
 
   const openModal = (url: string) => {
     setModalState({ isOpen: true, url });
+    analyticsService.logEvent('MODAL_OPEN', { url });
   };
 
   const closeModal = () => {
     setModalState(prev => ({ ...prev, isOpen: false }));
+    analyticsService.logEvent('MODAL_CLOSE', {});
   };
 
   const openShare = (data: { arabic: string, translation: string, reference: string }) => {
     setShareState({ isOpen: true, verseData: data });
+    analyticsService.logEvent('MODAL_OPEN', { type: 'share_modal' });
   };
 
   const closeShare = () => {
     setShareState(prev => ({ ...prev, isOpen: false }));
+    analyticsService.logEvent('MODAL_CLOSE', { type: 'share_modal' });
   };
 
   return (
