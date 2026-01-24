@@ -37,15 +37,47 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, verseDa
     const startTime = Date.now();
 
     try {
+      // Parse Surah and Ayah Number from reference
+      // Expected format: "Nama Surah (Nomor): Ayat" e.g. "Al-Fatihah (1): 1"
+      let surahNum = 0;
+      let ayahNum = 0;
+
+      const refMatch = verseData.reference.match(/\((\d+)\):\s*(\d+)/);
+      if (refMatch) {
+          surahNum = parseInt(refMatch[1] || '0');
+          ayahNum = parseInt(refMatch[2] || '0');
+      } else {
+        // Fallback parsing if format is just "Surah: Ayah" (less reliable for caching but try to extract)
+        const parts = verseData.reference.split(':');
+        if (parts.length === 2 && parts[1]) {
+             const ayahPart = parseInt(parts[1].trim());
+             if (!isNaN(ayahPart)) ayahNum = ayahPart;
+             // Surah number is hard to infer without map, so we might fail caching if strictly required
+             // But let's try to proceed if we have at least ayah, though DB requires both.
+             // If we cant parse, we fall back to direct generation (no cache) or use 0
+        }
+      }
+
       const theme = `${verseData.reference}: ${verseData.translation.substring(0, 50)}`;
-      const img = await geminiService.generateVerseImage(theme);
+      let img = '';
+
+      if (surahNum > 0 && ayahNum > 0) {
+          img = await geminiService.getOrGenerateVerseImage(surahNum, ayahNum, theme);
+      } else {
+          console.warn('Could not parse Surah/Ayah number for caching, bypassing cache.', verseData.reference);
+          img = await geminiService.generateVerseImage(theme);
+      }
+
       imageCache.current[cacheKey] = img;
       setImageUrl(img);
 
       // Track successful image generation
       const generationTime = Date.now() - startTime;
-      const [surah, ayah] = verseData.reference.split(':').map(s => s.trim());
-      analyticsService.trackImageGeneration(generationTime, surah || 'unknown', ayah || 'unknown');
+      const refParts = verseData.reference.split(':');
+      const surahTitle = refParts[0] ? refParts[0].trim() : 'unknown';
+      const ayahTitle = refParts[1] ? refParts[1].trim() : 'unknown';
+
+      analyticsService.trackImageGeneration(generationTime, surahTitle, ayahTitle);
     } catch (error) {
       console.error(error);
 

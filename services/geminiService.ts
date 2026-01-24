@@ -7,6 +7,8 @@ import { GoogleGenAI } from "@google/genai";
 import { API_CONFIG, ERROR_MESSAGES, GEMINI_CONFIG } from '../constants';
 import { handleError, logError } from '../utils/errorHandler';
 import { quranService } from './quranService';
+import { supabase } from './supabaseClient';
+
 
 // Check if running in development mode with API key
 const isDevelopment = import.meta.env.DEV;
@@ -234,6 +236,75 @@ STRICT GUIDELINES:
       // Return user-friendly error instead of throwing
       console.error('Image generation failed:', appError.message);
       throw new Error('Fitur generate gambar sementara tidak tersedia. Silakan coba lagi nanti.');
+    }
+  },
+
+  async getOrGenerateVerseImage(surah: number, ayah: number, theme: string): Promise<string> {
+    try {
+      // 1. Check Cache in Supabase DB
+      const { data: existingImage } = await supabase
+        .from('verse_images')
+        .select('image_url')
+        .match({ surah_number: surah, ayah_number: ayah })
+        .single();
+
+      if (existingImage?.image_url) {
+        console.log('📦 Using cached image from Supabase');
+        return existingImage.image_url;
+      }
+
+      console.log('🎨 Cache miss, generating new image...');
+      // 2. Generate Image via Gemini (returns Base64)
+      const base64Image = await this.generateVerseImage(theme);
+
+      // 3. Upload to Supabase Storage
+      const timestamp = Date.now();
+      const fileName = `${surah}-${ayah}-${timestamp}.png`;
+
+      // Convert Base64 to Blob/Buffer for upload
+      const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from('generated-images')
+        .upload(fileName, bytes.buffer, {
+          contentType: 'image/png',
+          upsert: false // Don't overwrite, time-based filenames avoid collision
+        });
+
+      if (uploadError) {
+        console.warn('Failed to upload image to Supabase:', uploadError);
+        return base64Image; // Return generated image even if caching fails
+      }
+
+      // 4. Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('generated-images')
+        .getPublicUrl(fileName);
+
+      // 5. Save metadata to DB
+      const { error: dbError } = await supabase
+        .from('verse_images')
+        .insert({
+          surah_number: surah,
+          ayah_number: ayah,
+          theme: theme,
+          image_url: publicUrl
+        });
+
+      if (dbError) {
+        console.warn('Failed to save image metadata:', dbError);
+      }
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error in getOrGenerateVerseImage:', error);
+      // Fallback to direct generation if something in the caching flow breaks
+      return this.generateVerseImage(theme);
     }
   },
 
