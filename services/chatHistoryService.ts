@@ -19,14 +19,46 @@ export interface DBMessage {
   created_at: string;
 }
 
+// Helper to try reading user ID from local storage directly (Optimistic Check)
+const getUserFromLocalStorage = () => {
+    try {
+        if (typeof window === 'undefined') return null;
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('sb-') && key?.endsWith('-auth-token')) {
+                const sessionStr = localStorage.getItem(key);
+                if (sessionStr) {
+                    const session = JSON.parse(sessionStr);
+                    if (session?.user?.id) {
+                        return session.user.id;
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error parsing local storage session:', e);
+    }
+    return null;
+};
+
 // Helper to get or create a user ID (prioritizes Auth user, fallbacks to local anonymous)
 export const getUserId = async () => {
   console.log('[chatHistory] getUserId called');
+
+  // 1. Optimistic Check: Try local storage FIRST (Instant return)
+  // This solves the slow load time issue by returning immediately if we know the user.
+  const optimisticUserId = getUserFromLocalStorage();
+  if (optimisticUserId) {
+      console.log('[chatHistory] Optimistic: Found User ID in local storage, returning immediately:', optimisticUserId);
+      return optimisticUserId;
+  }
+
   try {
-    // 1. Check if Supabase Auth user exists with a timeout
-    // Create a promise that rejects after 2 seconds
+    // 2. Check if Supabase Auth user exists with a timeout
+    console.log('[chatHistory] Local storage empty, fetching session from Supabase...');
+    // Create a promise that rejects after 5 seconds
     const timeoutPromise = new Promise<{ data: { session: null } }>((_, reject) =>
-        setTimeout(() => reject(new Error('Session fetch timeout')), 10000)
+        setTimeout(() => reject(new Error('Session fetch timeout')), 5000)
     );
 
     // Race the session fetch against the timeout
@@ -40,11 +72,13 @@ export const getUserId = async () => {
       console.log('[chatHistory] Using Auth User ID');
       return session.user.id;
     }
-  } catch (err) {
-    console.error('[chatHistory] Error getting session or timeout:', err);
+  } catch (err: any) {
+    // If we're here, it means we don't have a local ID AND the network failed/timed out.
+    // This is a genuine error case where we might fall back to anonymous.
+    console.warn('[chatHistory] Session fetch failed/timed out and no local ID found:', err.message || err);
   }
 
-  // 2. Fallback to anonymous local ID
+  // 3. Fallback to anonymous local ID
   console.log('[chatHistory] Using Anonymous ID');
   let userId = localStorage.getItem('sahabat_quran_user_id');
   if (!userId) {
@@ -60,18 +94,29 @@ export const getAnonymousId = () => {
 };
 
 export const chatHistoryService = {
-  async getConversations(): Promise<Conversation[]> {
-    console.log('[chatHistory] getConversations start');
+  async getConversations(searchQuery?: string): Promise<Conversation[]> {
+    console.log('[chatHistory] getConversations start', searchQuery ? `with query: ${searchQuery}` : '');
     const userId = await getUserId();
-    console.log('[chatHistory] Fetching conversations for:', userId);
+    console.log('[chatHistory] User ID:', userId);
 
-    // Race the DB query against a timeout
-    const dbPromise = supabase
+    // Start building the query
+    let query = supabase
       .from('conversations')
       .select('*')
       .eq('user_id', userId)
-      .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false })
+      .limit(10);
 
+    // Apply search filter if query exists
+    if (searchQuery) {
+      query = query.ilike('title', `%${searchQuery}%`);
+    }
+
+    // console.log('[chatHistory] Executing query for user:', userId);
+
+    const dbPromise = query;
+
+    // Safety timeout: If DB doesn't respond in 15s, return empty to stop spinner
     const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
         setTimeout(() => reject(new Error('DB fetch timeout')), 15000)
     );
@@ -82,7 +127,7 @@ export const chatHistoryService = {
             timeoutPromise
         ]) as any;
 
-        console.log('[chatHistory] Fetch result:', { dataLength: data?.length, error });
+        // console.log('[chatHistory] Fetch result:', { dataLength: data?.length, error });
 
         if (error) {
           console.error('Error fetching conversations:', error);
