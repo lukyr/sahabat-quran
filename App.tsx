@@ -8,6 +8,7 @@ import { ShareModal } from './components/ShareModal';
 import { InstallPWA } from './components/InstallPWA';
 import { analyticsService } from './services/analyticsService';
 import { initWebVitals } from './utils/webVitals';
+import { supabase } from './services/supabaseClient';
 
 const App: React.FC = () => {
   const [modalState, setModalState] = useState<{ isOpen: boolean; url: string }>({
@@ -29,6 +30,21 @@ const App: React.FC = () => {
 
     // Initialize Core Web Vitals tracking for SEO
     initWebVitals();
+
+    // Listen for auth changes to clean up URL
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') {
+        // Clean up the URL hash that contains the access token
+        if (window.location.hash && window.location.hash.includes('access_token')) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+
   }, []);
 
   const openModal = (url: string) => {

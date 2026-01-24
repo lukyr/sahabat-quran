@@ -37,7 +37,12 @@ Setiap ayat WAJIB memiliki link referensi di baris baru.
 FORMAT LINK: Tuliskan URL mentah saja tanpa tanda kurung atau format markdown [teks](url).
 CONTOH LINK: https://quran.com/id/1:1?translations=33
 
-Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.`,
+Gunakan Bahasa Indonesia sepenuhnya dengan nada yang hangat dan sopan.
+
+PENTING - SUMBER DATA:
+Untuk setiap ayat dan terjemahan, Anda WAJIB menggunakan data dari tools (search_verse, get_ayah_details & get_surah_info).
+JANGAN PERNAH mengutip ayat atau terjemahan dari ingatan Anda sendiri karena bisa tidak akurat.
+Jika tools gagal atau tidak memberikan hasil, katakan sejujurnya bahwa data tidak ditemukan, jangan mengarang.`,
   TOOLS: [
     {
       name: 'search_verse',
