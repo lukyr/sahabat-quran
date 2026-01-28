@@ -9,7 +9,7 @@ import { GoogleGenAI } from '@google/genai';
 // Gemini Configuration (inlined for Vercel serverless)
 const GEMINI_CONFIG = {
   MODEL_NAMES: {
-    FLASH: 'gemini-2.0-flash-lite-preview-02-05',
+    FLASH: 'gemini-2.5-flash',
   },
   SYSTEM_INSTRUCTION: `Anda adalah Sahabat Quran. Bantu pengguna mengeksplorasi Al-Quran dengan penuh kasih dan data yang akurat.
 

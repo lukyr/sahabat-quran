@@ -149,10 +149,10 @@ export const FEATURES = {
 // Gemini Configuration
 export const GEMINI_CONFIG = {
   MODEL_NAMES: {
-    FLASH: "gemini-2.0-flash-lite-preview-02-05",
-    STABLE: "gemini-1.5-flash",
-    IMAGE: "gemini-2.5-flash-image",
-    LITE: "gemini-2.0-flash-lite-preview-02-05",
+    FLASH: "gemini-2.5-flash",
+    STABLE: "gemini-2.5-flash",
+    IMAGE: "gemini-2.5-flash",
+    LITE: "gemini-2.5-flash",
   },
   SYSTEM_INSTRUCTION: `Anda adalah Sahabat Quran. Bantu pengguna mengeksplorasi Al-Quran dengan penuh kasih dan data yang akurat.
 

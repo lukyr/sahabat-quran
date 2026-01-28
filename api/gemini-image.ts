@@ -9,7 +9,7 @@ import { GoogleGenAI } from '@google/genai';
 // Gemini Configuration (inlined for Vercel serverless)
 const GEMINI_CONFIG = {
   MODEL_NAMES: {
-    IMAGE: 'gemini-2.5-flash-image',
+    IMAGE: 'gemini-2.5-flash',
   },
 };
 
